@@ -1,0 +1,51 @@
+// Soheil Guard on its own: the token checks behind soheil.fi's safety label. One dependency (Jackson, for JSON).
+plugins {
+    id 'java-library'
+}
+
+group = 'fi.soheil'
+version = '0.1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api 'tools.jackson.core:jackson-databind:3.1.5'
+
+    testImplementation platform('org.junit:junit-bom:6.0.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.assertj:assertj-core:3.27.7'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// The example host (example/CheckContract.java): gradlew example -Prpc=<rpc url> -Ptoken=<token address>
+sourceSets {
+    example {
+        java.srcDirs = ['example']
+        compileClasspath += sourceSets.main.output + configurations.runtimeClasspath
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+tasks.register('example', JavaExec) {
+    description = 'Checks one token contract through an EVM JSON-RPC endpoint.'
+    classpath = sourceSets.example.runtimeClasspath
+    mainClass = 'CheckContract'
+    args = [project.findProperty('rpc') ?: '', project.findProperty('token') ?: ''].findAll { it }
+}
